@@ -124,6 +124,9 @@ allowed_activity_actions = [
     "nft_weekly_award"
 ]
 
+# Tambahkan flag always_complete_quest di bagian awal kode
+always_complete_quest = True
+
 # Function to initiate session with exponential backoff
 def init_session(address, headers, retries=5):
     payload = {"address": address}
@@ -248,7 +251,7 @@ def complete_quest(access_token, quest, user_address, headers):
     headers['Authorization'] = f"Bearer {access_token}"
     complete_quest_endpoint = complete_quest_endpoint_template.format(user_address=user_address, activity_action=quest['activity_action'])
     response = requests.post(complete_quest_endpoint, headers=headers)
-    
+
     if response.status_code == 200:
         log(f"✔ Quest '{quest['title']}' completed successfully")
         return True
@@ -399,7 +402,8 @@ while True:
             quests = get_quests(access_token, headers)
             if quests:
                 for quest in quests:
-                    if quest['activity_action'] not in latest_activity_actions:
+                    # Modifikasi bagian yang memeriksa dan menyelesaikan quest
+                    if quest['activity_action'] not in latest_activity_actions or always_complete_quest:
                         success = complete_quest(access_token, quest, account, headers)
                         if not success:
                             response = requests.post(complete_quest_endpoint_template.format(user_address=account, activity_action=quest['activity_action']), headers=headers)
