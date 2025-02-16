@@ -183,7 +183,7 @@ def authenticate(private_key, init_data, headers, retries=5):
             log(f"⚠ Response: {response.text}")
     return None
 
-# Function to login with privy token with retry and exponential backoff
+# Function to login with privy token and get crestal token with retry and exponential backoff
 def login_with_privy_token(privy_token, user_address, headers, retries=5):
     payload = {"privy_token": privy_token, "user_address": user_address}
     for attempt in range(retries):
@@ -268,17 +268,9 @@ def claim_ref_code(access_token, ref_code, headers):
     
     if response.status_code == 200:
         log(f"✔ Referral code '{ref_code}' claimed successfully")
-        return True
-    elif response.status_code == 409:
-        log(f"✖ Referral code '{ref_code}' claim failed: {response.status_code}, {response.json().get('msg', response.text)}")
-        return False
+        return response
     else:
-        try:
-            error_msg = response.json().get('msg', response.text)
-        except json.JSONDecodeError:
-            error_msg = response.text
-        log(f"✖ Referral code '{ref_code}' claim failed: {response.status_code}, {error_msg}")
-        return False
+        return response
 
 # Function to generate or retrieve User-Agent
 def generate_headers(account):
@@ -393,14 +385,14 @@ while True:
             # Skip claiming referral code if already referred
             if not profile_data.get('is_referred', False):
                 for ref_code in referral_codes:
-                    if claim_ref_code(access_token, ref_code, headers):
+                    response = claim_ref_code(access_token, ref_code, headers)
+                    if response.status_code == 200:
                         referral_codes.remove(ref_code)
                         save_referral_codes(referral_codes_file, referral_codes)
                         break
-                    else:
-                        if "409" in response.text:
-                            referral_codes.remove(ref_code)
-                            save_referral_codes(referral_codes_file, referral_codes)
+                    elif response.status_code == 409:
+                        referral_codes.remove(ref_code)
+                        save_referral_codes(referral_codes_file, referral_codes)
 
             latest_quests = get_latest_quests(access_token, account, headers)
             latest_activity_actions = [quest['activity_action'] for quest in latest_quests]
