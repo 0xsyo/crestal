@@ -1,0 +1,5 @@
+requests
+web3
+eth-account
+colorama
+fake_useragent
